@@ -10,7 +10,7 @@ namespace Replica
         public static bool NetVarEqual<T>(T value, ref T fieldValue) => EqualityComparer<T>.Default.Equals(value, fieldValue);
 
 
-        //TODO replace with ref call to backing field on codegen maybe?
+        //TODO: replace with ref call to backing field on codegen maybe?
         public static bool NetVarEqual<T>(T value, T propertyValue) => EqualityComparer<T>.Default.Equals(value, propertyValue);
 
 
