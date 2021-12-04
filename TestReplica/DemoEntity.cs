@@ -5,6 +5,8 @@ namespace TestReplica
 {
     public class DemoEntity : NetworkBehaviour
     {
+        //this also work but prone to typos HEHE
+        //[NetVar("OnSpeedChanged")] public float Speed { get; set; }
         [NetVar(nameof(OnSpeedChanged))] public float Speed { get; set; }
 
         public void OnSpeedChanged(float newValue)
