@@ -1,31 +1,54 @@
-﻿using System;
+﻿using Replica;
+using System;
+using System.Collections.Generic;
 
 namespace TestReplica
 {
     class Program
-	{
-		static void Main(string[] args)
+    {
+        static void Main(string[] args)
         {
-            DemoEntity server = new DemoEntity();
+            DemoEntity clientA = new DemoEntity(false, "CLIENT_A");
 
-            DemoEntity client = new DemoEntity();
+            DemoEntity clientB = new DemoEntity(true, "CLIENT_B");
 
-            //stolen packet class from Tom cause i'm lazy to make one rn.
-            Packet packet = new Packet();
+            Console.ForegroundColor = ConsoleColor.Red;
 
-            Console.WriteLine($"CHANGED FLAGS {server.Flags}");
+            Console.WriteLine("INITIAL RUN");
 
-            server.Speed = 5.5f;
+            //clientA.Health = 55;
+            clientA.NetworkSpeed = 12.5f;
 
-            server.WriteNetVars(ref packet, true);
+            NetBuffer bufferAX = new NetBuffer();
 
-            Console.WriteLine($"CHANGED FLAGS {client.Flags}");
+            clientA.WriteNetVars(bufferAX, true);
+            clientB.ReadNetVars(bufferAX, true);
 
-            Console.WriteLine(packet.ToArray().Length);
+            Console.WriteLine($"CLIENT_A CHANGED FLAGS {clientA.Flags}");
+            Console.WriteLine($"CLIENT_B CHANGED FLAGS {clientB.Flags}");
 
-            client.ReadNetVars(ref packet, true);
+            Console.ForegroundColor = ConsoleColor.Green;
+
+            for (int i = 1; i < 5; i++)
+            {
+                NetBuffer bufferA = new NetBuffer();
+
+                Console.WriteLine($"NORMAL RUN {i} -->");
+
+                clientA.NetworkSpeed = 1.5f * i;
+                clientA.vars++;
+
+                clientA.WriteNetVars(bufferA, false);
+                clientB.ReadNetVars(bufferA, false);
+
+                Console.WriteLine($"CLIENT_A CHANGED FLAGS {clientA.Flags}");
+                Console.WriteLine($"CLIENT_B CHANGED FLAGS {clientB.Flags}");
+
+            }
+
 
             Console.ReadLine();
+
         }
     }
 }

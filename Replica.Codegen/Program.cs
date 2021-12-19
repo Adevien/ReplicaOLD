@@ -16,74 +16,73 @@ namespace Replica.Codegen
             {
                 //TODO: ADD THE PATH TO THE DEMO EXE CURRENTLY HARDCODED
                 //TODO: RE-RE-RE-RE-RE-RE-RE-RE-RE-REFACTORING
-                string AssemblyPath = @"D:\Replica_Solution\TestReplica\bin\Debug\TestReplica.exe";
+                string AssemblyPath = $@"{AppDomain.CurrentDomain.BaseDirectory}\..\..\..\TestReplica\bin\Debug\TestReplica.exe";
 
                 using (var module = ModuleDefinition.ReadModule(AssemblyPath, new ReaderParameters { ReadWrite = true }))
                 {
                     foreach (TypeDefinition TypeDef in module.Types)
                     {
-                        if (!TypeDef.IsGenericInstance && TypeDef.BaseType != null && TypeDef.BaseType.FullName.Contains("NetworkBehaviour"))
+                        if (!TypeDef.IsGenericInstance && TypeDef.BaseType != null && TypeDef.BaseType.Resolve() == module.ImportReference(typeof(NetworkBehaviour)).Resolve())
                         {
-                            long FlagIndex = 2;
+                            int FlagIndex = 0;
 
                             foreach (PropertyDefinition property in TypeDef.Properties.Where(x => x.HasCustomAttributes).ToList())
                             {
                                 if (property.CustomAttributes.Any(x => x.AttributeType.FullName.Contains("NetVar")))
                                 {
-                                    Console.WriteLine($"PROPERTY_GEN ({property.Name} - {property.PropertyType.Name})");
+                                    var oldPropertyName = property.Name;
 
-                                    TypeDef.Fields.First(x => x.Name.Contains(property.Name)).Name = $"_{property.Name}_BackingField";
+                                    property.Name = $"{oldPropertyName}Network";
+
+                                    property.Resolve();
+
+                                    FlagIndex += 1;
+
+                                    Console.WriteLine($"PROPERTY_GEN ({oldPropertyName} - {property.PropertyType.Name})");
+
+                                    TypeDef.Fields.First(x => x.Name.Contains(oldPropertyName)).Name = $"{oldPropertyName}";
+                                    TypeDef.Fields.First(x => x.Name.Contains(oldPropertyName)).Attributes = FieldAttributes.Public;
 
                                     GenericInstanceMethod netVarEqual = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "NetVarEqual")).GetElementMethod());
-                                    netVarEqual.GenericArguments.Add(TypeDef.Fields.First(x => x.Name.Contains(property.Name)).FieldType);
+                                    netVarEqual.GenericArguments.Add(TypeDef.Fields.First(x => x.Name.Contains(oldPropertyName)).FieldType);
 
                                     GenericInstanceMethod setNetVar = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "SetNetVar")).GetElementMethod());
                                     setNetVar.GenericArguments.Add(property.PropertyType);
 
-                                    GenericInstanceMethod getSyncVarHookGuard = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "GetNetVarGuard")).GetElementMethod());
-                                    GenericInstanceMethod setSyncVarHookGuard = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "SetNetVarGuard")).GetElementMethod());
+                                    GenericInstanceMethod getSyncVarHookGuard = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "GetLock")).GetElementMethod());
+                                    GenericInstanceMethod setSyncVarHookGuard = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "SetLock")).GetElementMethod());
 
-                                    Instruction end = Instruction.Create(OpCodes.Nop);
+                                    Instruction endBreach = Instruction.Create(OpCodes.Nop);
 
                                     Collection<Instruction> NewIL = new Collection<Instruction>();
 
-                                    property.SetMethod.Resolve();
-
                                     NewIL.Add(Instruction.Create(OpCodes.Ldarg_1));
                                     NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                    NewIL.Add(Instruction.Create(OpCodes.Ldflda, TypeDef.Fields.First(x => x.Name.Contains(property.Name)).Resolve()));
+                                    NewIL.Add(Instruction.Create(OpCodes.Ldflda, TypeDef.Fields.First(x => x.Name.Contains(oldPropertyName)).Resolve()));
                                     NewIL.Add(Instruction.Create(OpCodes.Call, netVarEqual));
-                                    NewIL.Add(Instruction.Create(OpCodes.Brtrue, end));
-                                  
+                                    NewIL.Add(Instruction.Create(OpCodes.Brtrue, endBreach));
+
                                     NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
                                     NewIL.Add(Instruction.Create(OpCodes.Ldarg_1));
                                     NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                    NewIL.Add(Instruction.Create(OpCodes.Ldflda, TypeDef.Fields.First(x => x.Name.Contains(property.Name)).Resolve()));
-                                    NewIL.Add(Instruction.Create(OpCodes.Ldc_I8, FlagIndex));
+                                    NewIL.Add(Instruction.Create(OpCodes.Ldflda, TypeDef.Fields.First(x => x.Name.Contains(oldPropertyName)).Resolve()));
+                                    NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, FlagIndex));
                                     NewIL.Add(Instruction.Create(OpCodes.Call, setNetVar));
-                                    NewIL.Add(end);
-
+                                    NewIL.Add(endBreach);
 
                                     if (property.CustomAttributes.First(x => x.AttributeType.Name == "NetVar").ConstructorArguments.Any())
                                     {
-                                        //VariableDefinition callbackValue = new VariableDefinition(property.PropertyType);
-                                        //property.SetMethod.Body.Variables.Add(callbackValue);
+                                        object callbackName = property.CustomAttributes.First(x => x.AttributeType.Name == "NetVar").ConstructorArguments.First().Value;
 
-                                        //NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                        //NewIL.Add(Instruction.Create(OpCodes.Call, property.GetMethod.Resolve()));
-                                        //NewIL.Add(Instruction.Create(OpCodes.Stloc, callbackValue));
-
-                                        string callbackName = (string)property.CustomAttributes.First(x => x.AttributeType.Name == "NetVar").ConstructorArguments.First().Value;
-
-                                        GenericInstanceMethod valueChanged = new GenericInstanceMethod(module.ImportReference(TypeDef.Methods.First(m => m.Name.Contains(callbackName)).GetElementMethod()));
+                                        GenericInstanceMethod valueChanged = new GenericInstanceMethod(TypeDef.Methods.First(m => m.Name.Contains((string)callbackName)));
 
                                         NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I8, FlagIndex));
+                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, FlagIndex));
                                         NewIL.Add(Instruction.Create(OpCodes.Call, getSyncVarHookGuard));
-                                        NewIL.Add(Instruction.Create(OpCodes.Brtrue, end));
+                                        NewIL.Add(Instruction.Create(OpCodes.Brtrue, endBreach));
 
                                         NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I8, FlagIndex));
+                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, FlagIndex));
                                         NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, 1));
                                         NewIL.Add(Instruction.Create(OpCodes.Call, setSyncVarHookGuard));
 
@@ -92,12 +91,11 @@ namespace Replica.Codegen
                                         NewIL.Add(Instruction.Create(OpCodes.Callvirt, valueChanged));
 
                                         NewIL.Add(Instruction.Create(OpCodes.Ldarg_0));
-                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I8, FlagIndex));
+                                        NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, FlagIndex));
                                         NewIL.Add(Instruction.Create(OpCodes.Ldc_I4, 0));
                                         NewIL.Add(Instruction.Create(OpCodes.Call, setSyncVarHookGuard));
 
-                                        NewIL.Add(end);
-
+                                        NewIL.Add(endBreach);
                                     }
 
                                     NewIL.Add(Instruction.Create(OpCodes.Ret));
@@ -105,21 +103,281 @@ namespace Replica.Codegen
                                     property.SetMethod.Body.Instructions.Clear();
                                     property.SetMethod.Body.Instructions.AddRangeAt(NewIL, 0);
 
-                                    property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
-
-                                    FlagIndex *= 2;
+                                    //property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
                                 }
                             }
+                            const MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual;
+
+                            var WriteMethod = new MethodDefinition("WriteNetVars", attributes, module.ImportReference(typeof(bool)));
+
+                            WriteMethod.Parameters.Add(new ParameterDefinition("writer", ParameterAttributes.None, module.ImportReference(typeof(NetBuffer))));
+                            WriteMethod.Parameters.Add(new ParameterDefinition("initial", ParameterAttributes.None, module.ImportReference(typeof(bool))));
+                            WriteMethod.Body.Variables.Add(new VariableDefinition(module.ImportReference(typeof(bool))));
+                            WriteMethod.Body.InitLocals = true;
+
+                            MethodReference baseSerialize = module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "WriteNetVars")).GetElementMethod();
+
+                            var worker = WriteMethod.Body.GetILProcessor();
+
+                            worker.Emit(OpCodes.Ldarg_0);
+                            worker.Emit(OpCodes.Ldarg_1);
+                            worker.Emit(OpCodes.Ldarg_2);
+                            worker.Emit(OpCodes.Call, baseSerialize);
+                            worker.Emit(OpCodes.Stloc_0);
+
+                            Instruction initialStateLabel = worker.Create(OpCodes.Nop);
+
+                            worker.Emit(OpCodes.Ldarg_2);
+                            worker.Emit(OpCodes.Brfalse, initialStateLabel);
+
+                            foreach (FieldDefinition syncVar in TypeDef.Fields.Where(x => x.HasCustomAttributes).ToList())
+                            {
+                                worker.Emit(OpCodes.Ldarg_1);
+                                worker.Emit(OpCodes.Ldarg_0);
+                                worker.Emit(OpCodes.Ldfld, syncVar);
+                                MethodReference writeFunc = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "WriteFloat")).GetElementMethod();
+                                if (writeFunc != null)
+                                {
+                                    worker.Emit(OpCodes.Call, writeFunc);
+                                }
+                            }
+
+                            worker.Emit(OpCodes.Ldc_I4_1);
+                            worker.Emit(OpCodes.Ret);
+
+                            worker.Append(initialStateLabel);
+
+                            worker.Emit(OpCodes.Ldarg_1);
+                            worker.Emit(OpCodes.Ldarg_0);
+                            worker.Emit(OpCodes.Call, module.ImportReference(TypeDef.BaseType.Resolve().Properties.First(m => m.Name == "Flags").GetMethod));
+                            MethodReference writeIn32Func = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "WriteInt")).GetElementMethod();
+                            worker.Emit(OpCodes.Call, writeIn32Func);
+
+                            int dirtyBit = 0;
+                            foreach (FieldDefinition syncVar in TypeDef.Fields.Where(x => x.HasCustomAttributes).ToList())
+                            {
+                                Instruction endBreach = worker.Create(OpCodes.Nop);
+
+                                worker.Emit(OpCodes.Ldarg_0);
+                                worker.Emit(OpCodes.Call, module.ImportReference(TypeDef.BaseType.Resolve().Properties.First(m => m.Name == "Flags").GetMethod));
+                                worker.Emit(OpCodes.Ldc_I4, 1 << dirtyBit);
+                                worker.Emit(OpCodes.And);
+                                worker.Emit(OpCodes.Brfalse, endBreach);
+
+                                worker.Emit(OpCodes.Ldarg_1);
+                                worker.Emit(OpCodes.Ldarg_0);
+                                worker.Emit(OpCodes.Ldfld, syncVar);
+
+                                MethodReference writeFunc = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "WriteFloat")).GetElementMethod();
+                                if (writeFunc != null)
+                                {
+                                    worker.Emit(OpCodes.Call, writeFunc);
+                                }
+
+                                worker.Emit(OpCodes.Ldc_I4_1);
+                                worker.Emit(OpCodes.Stloc_0);
+
+                                worker.Append(endBreach);
+                                dirtyBit += 1;
+                            }
+
+                            worker.Emit(OpCodes.Ldloc_0);
+                            worker.Emit(OpCodes.Ret);
+
+                            TypeDef.Methods.Add(WriteMethod);
+
+                            ///DESERIALIZE
+
+                            var ReadMethod = new MethodDefinition("ReadNetVars", attributes, module.ImportReference(typeof(void)));
+
+                            ReadMethod.Parameters.Add(new ParameterDefinition("reader", ParameterAttributes.None, module.ImportReference(typeof(NetBuffer))));
+                            ReadMethod.Parameters.Add(new ParameterDefinition("initial", ParameterAttributes.None, module.ImportReference(typeof(bool))));
+                            ReadMethod.Body.Variables.Add(new VariableDefinition(module.ImportReference(typeof(int))));
+                            ReadMethod.Body.InitLocals = true;
+
+                            MethodReference baseDeserialize = module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "ReadNetVars")).GetElementMethod();
+
+                            var serWorker = ReadMethod.Body.GetILProcessor();
+
+                            if (baseDeserialize != null)
+                            {
+                                // base
+                                serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                // reader
+                                serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                                // initialState
+                                serWorker.Append(serWorker.Create(OpCodes.Ldarg_2));
+                                serWorker.Append(serWorker.Create(OpCodes.Call, baseDeserialize));
+                            }
+
+                            //Generates: if (initialState) ;
+                            Instruction initialStateLabel2 = serWorker.Create(OpCodes.Nop);
+
+                            serWorker.Append(serWorker.Create(OpCodes.Ldarg_2));
+                            serWorker.Append(serWorker.Create(OpCodes.Brfalse, initialStateLabel2));
+
+                            foreach (FieldDefinition syncVar in TypeDef.Fields.Where(x => x.HasCustomAttributes).ToList())
+                            {
+                                MethodReference readFunc = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "ReadFloat")).GetElementMethod();
+
+                                try
+                                {
+                                    var callbackName = TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).CustomAttributes.First().ConstructorArguments.First().Value;
+
+                                    MethodReference hookMethod = TypeDef.Methods.First(m => m.Name.Contains((string)callbackName)).GetElementMethod();
+
+                                    if (hookMethod != null)
+                                    {
+                                        VariableDefinition oldValue = new VariableDefinition(module.ImportReference(syncVar.FieldType));
+                                        ReadMethod.Body.Variables.Add(oldValue);
+
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+
+                                        serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).GetMethod));
+                                        serWorker.Append(serWorker.Create(OpCodes.Stloc, oldValue));
+
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                                        serWorker.Append(serWorker.Create(OpCodes.Call, readFunc));
+                                        serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).SetMethod));
+
+                                        WriteCallback(TypeDef, serWorker, module, syncVar, oldValue);
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                    VariableDefinition oldValue = new VariableDefinition(module.ImportReference(syncVar.FieldType));
+                                    ReadMethod.Body.Variables.Add(oldValue);
+
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldfld, syncVar));
+                                    serWorker.Append(serWorker.Create(OpCodes.Stloc, oldValue));
+
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                                    serWorker.Append(serWorker.Create(OpCodes.Call, readFunc));
+                                    serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).SetMethod));
+
+                                    WriteCallback(TypeDef, serWorker, module, syncVar, oldValue);
+                                }
+                            }
+
+                            serWorker.Append(serWorker.Create(OpCodes.Ret));
+
+                            serWorker.Append(initialStateLabel2);
+
+                            MethodReference getFlags = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "ReadInt")).GetElementMethod();
+
+                            serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                            serWorker.Append(serWorker.Create(OpCodes.Call, getFlags));
+                            serWorker.Append(serWorker.Create(OpCodes.Stloc_0));
+
+                            int dirtyBits = 0;
+                            foreach (FieldDefinition syncVar in TypeDef.Fields.Where(x => x.HasCustomAttributes).ToList())
+                            {
+                                Instruction varLabel = serWorker.Create(OpCodes.Nop);
+
+                                serWorker.Append(serWorker.Create(OpCodes.Ldloc_0));
+                                serWorker.Append(serWorker.Create(OpCodes.Ldc_I4, 1 << dirtyBits));
+                                serWorker.Append(serWorker.Create(OpCodes.And));
+                                serWorker.Append(serWorker.Create(OpCodes.Brfalse, varLabel));
+
+                                MethodReference readFunc = module.ImportReference(module.ImportReference(typeof(NetBuffer)).Resolve().Methods.First(m => m.Name == "ReadFloat")).GetElementMethod();
+
+                                VariableDefinition oldValue = new VariableDefinition(module.ImportReference(syncVar.FieldType));
+                                ReadMethod.Body.Variables.Add(oldValue);
+
+                                try
+                                {
+                                    var callbackName = TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).CustomAttributes.First().ConstructorArguments.First().Value;
+
+                                    MethodReference hookMethod = TypeDef.Methods.First(m => m.Name.Contains((string)callbackName)).GetElementMethod();
+
+                                    if (hookMethod != null)
+                                    {
+
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldfld, syncVar));
+                                        serWorker.Append(serWorker.Create(OpCodes.Stloc, oldValue));
+
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                        serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                                        serWorker.Append(serWorker.Create(OpCodes.Call, readFunc));
+                                        serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).SetMethod));
+
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldfld, syncVar));
+                                    serWorker.Append(serWorker.Create(OpCodes.Stloc, oldValue));
+
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
+                                    serWorker.Append(serWorker.Create(OpCodes.Call, readFunc));
+                                    serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).SetMethod));
+                                }
+
+                                WriteCallback(TypeDef, serWorker, module, syncVar, oldValue);
+
+                                serWorker.Append(varLabel);
+                                dirtyBits += 1;
+                            }
+
+                            serWorker.Append(serWorker.Create(OpCodes.Ret));
+
+                            TypeDef.Methods.Add(ReadMethod);
+
                         }
                     }
 
                     module.Write();
                 }
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 Console.ReadLine();
+
+            }
+        }
+
+        public static void WriteCallback(TypeDefinition TypeDef, ILProcessor serWorker, ModuleDefinition module, FieldDefinition syncVar, VariableDefinition oldValue)
+        {
+            try
+            {
+                var callbackName = TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).CustomAttributes.First().ConstructorArguments.First().Value;
+
+                MethodReference hookMethod = TypeDef.Methods.First(m => m.Name.Contains((string)callbackName)).GetElementMethod();
+
+                if (hookMethod != null)
+                {
+                    Instruction syncVarEqualLabel = serWorker.Create(OpCodes.Nop);
+
+                    GenericInstanceMethod netVarEqual = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "NetVarEqual")).GetElementMethod());
+                    netVarEqual.GenericArguments.Add(TypeDef.Fields.First(x => x.Name.Contains(syncVar.Name)).FieldType);
+
+                    serWorker.Append(serWorker.Create(OpCodes.Ldloc, oldValue));
+                    // 'ref this.syncVar'
+                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                    serWorker.Append(serWorker.Create(OpCodes.Ldflda, syncVar));
+                    // call the function
+                    serWorker.Append(serWorker.Create(OpCodes.Call, netVarEqual));
+                    serWorker.Append(serWorker.Create(OpCodes.Brtrue, syncVarEqualLabel));
+
+                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                    serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
+                    serWorker.Append(serWorker.Create(OpCodes.Call, TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).GetMethod));
+                    serWorker.Append(serWorker.Create(OpCodes.Callvirt, hookMethod));
+
+                    serWorker.Append(syncVarEqualLabel);
+                }
+            }
+            catch (Exception)
+            {
+
 
             }
         }
