@@ -36,7 +36,6 @@ namespace TestReplica
                 Console.WriteLine($"NORMAL RUN {i} -->");
 
                 clientA.NetworkSpeed = 1.5f * i;
-                clientA.vars++;
 
                 clientA.WriteNetVars(bufferA, false);
                 clientB.ReadNetVars(bufferA, false);

@@ -81,17 +81,6 @@ namespace TestReplica
 			}
 		}
 
-		public void VarsChanged(int old, int newValue)
-        {
-
-        }
-
-		public SyncVar<int> vars = new SyncVar<int>(5, (var,vars) => {
-
-			Console.WriteLine("XD");
-		
-		});
-
 		public float Speed;
 
 		public bool IsLocal = false;
