@@ -1,6 +1,7 @@
 ﻿using Replica;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace TestReplica
 {
@@ -8,46 +9,39 @@ namespace TestReplica
     {
         static void Main(string[] args)
         {
-            DemoEntity clientA = new DemoEntity(false, "CLIENT_A");
+            DemoEntity clientA = new DemoEntity("CLIENT_A");
+            DemoEntity clientB = new DemoEntity("CLIENT_B");
 
-            DemoEntity clientB = new DemoEntity(true, "CLIENT_B");
+            clientA.IsLocal = false;
+            clientB.IsLocal = true;
 
-            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("----- INITIAL");
 
-            Console.WriteLine("INITIAL RUN");
+            clientA.Speed = 5.5f;
 
-            //clientA.Health = 55;
-            clientA.NetworkSpeed = 12.5f;
+            NetBuffer buffer = new NetBuffer();
 
-            NetBuffer bufferAX = new NetBuffer();
+            clientA.WriteNetVars(buffer, true);
+            clientB.ReadNetVars(buffer, true);
 
-            clientA.WriteNetVars(bufferAX, true);
-            clientB.ReadNetVars(bufferAX, true);
+            Console.WriteLine($"CLIENT_A FLAG COUNT {clientA.Flags}");
+            Console.WriteLine($"CLIENT_B FLAG COUNT {clientB.Flags}");
 
-            Console.WriteLine($"CLIENT_A CHANGED FLAGS {clientA.Flags}");
-            Console.WriteLine($"CLIENT_B CHANGED FLAGS {clientB.Flags}");
-
-            Console.ForegroundColor = ConsoleColor.Green;
-
-            for (int i = 1; i < 5; i++)
+            for (int i = 0; i < 100; i++)
             {
-                NetBuffer bufferA = new NetBuffer();
+                Console.WriteLine($"----- NORMAL STEP {i}");
+                clientA.Speed = 12.5f * i;
 
-                Console.WriteLine($"NORMAL RUN {i} -->");
+                clientA.WriteNetVars(buffer, false);
+                clientB.ReadNetVars(buffer, false);
 
-                clientA.NetworkSpeed = 1.5f * i;
-
-                clientA.WriteNetVars(bufferA, false);
-                clientB.ReadNetVars(bufferA, false);
-
-                Console.WriteLine($"CLIENT_A CHANGED FLAGS {clientA.Flags}");
-                Console.WriteLine($"CLIENT_B CHANGED FLAGS {clientB.Flags}");
-
+                Console.WriteLine($"CLIENT_A FLAG COUNT {clientA.Flags}");
+                Console.WriteLine($"CLIENT_B FLAG COUNT {clientB.Flags}");
             }
 
+            Console.WriteLine("DONE");
 
             Console.ReadLine();
-
         }
     }
 }

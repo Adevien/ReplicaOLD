@@ -7,28 +7,34 @@ namespace Replica
     {
         public int Flags { get; set; }
 
-        public static bool NetVarEqual<T>(T value, ref T fieldValue) => EqualityComparer<T>.Default.Equals(value, fieldValue);
+        public int FlagGuard { get; set; }
 
-        public void SetNetVar<T>(T value, ref T fieldValue, int flag)
+        public bool IsLocal { get; set; }
+
+        public static bool Equals<T>(T value, ref T fieldValue) => EqualityComparer<T>.Default.Equals(value, fieldValue);
+
+        public void Set<T>(T value, ref T fieldValue, int flag)
         {
 			SetFlag(flag);
             fieldValue = value;
 		}
 
-		public bool GetLock(int flag) => (Flags & flag) > 0;
-
-		public void SetLock(int flag, bool value)
+		protected bool GetGuard(int flag)
 		{
-            if (value)
-            {
-                Flags |= flag;
-                return;
-            }
+			return (this.FlagGuard & flag) > 0;
+		}
 
-            Flags &= ~flag;
-        }
+		protected void Guard(int flag, bool value)
+		{
+			if (value)
+			{
+				this.FlagGuard |= flag;
+				return;
+			}
+			this.FlagGuard &= ~flag;
+		}
 
-        public void SetFlag(int flag) => Flags |= flag;
+		public void SetFlag(int flag) => Flags |= flag;
 
         public virtual bool WriteNetVars(NetBuffer writer, bool initial)
         {
