@@ -344,24 +344,27 @@ namespace Replica.Codegen
 
         public static void WriteCallback(TypeDefinition TypeDef, ILProcessor serWorker, ModuleDefinition module, FieldDefinition syncVar, VariableDefinition oldValue)
         {
-            try
+            MethodReference hookMethod = null;
+            PropertyDefinition callbackName = null;
+
+            callbackName = TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name));
+
+            if (callbackName != null)
             {
-                var callbackName = TypeDef.Properties.First(x => x.Name.Contains(syncVar.Name)).CustomAttributes.First().ConstructorArguments.First().Value;
+                CustomAttribute _cattribute = callbackName.CustomAttributes.First();
 
-                MethodReference hookMethod = TypeDef.Methods.First(m => m.Name.ToLower().Contains(((string)callbackName).ToLower())).GetElementMethod();
-
-                if (hookMethod != null)
+                if (_cattribute.ConstructorArguments.Count > 0)
                 {
+                    hookMethod = TypeDef.Methods.First(m => m.Name.Contains((string)_cattribute.ConstructorArguments.First().Value));
+
                     Instruction syncVarEqualLabel = serWorker.Create(OpCodes.Nop);
 
                     GenericInstanceMethod Equals = new GenericInstanceMethod(module.ImportReference(TypeDef.BaseType.Resolve().Methods.First(m => m.Name == "Equals")).GetElementMethod());
                     Equals.GenericArguments.Add(TypeDef.Fields.First(x => x.Name.Contains(syncVar.Name)).FieldType);
 
                     serWorker.Append(serWorker.Create(OpCodes.Ldloc, oldValue));
-                    // 'ref this.syncVar'
                     serWorker.Append(serWorker.Create(OpCodes.Ldarg_0));
                     serWorker.Append(serWorker.Create(OpCodes.Ldflda, syncVar));
-                    // call the function
                     serWorker.Append(serWorker.Create(OpCodes.Call, Equals));
                     serWorker.Append(serWorker.Create(OpCodes.Brtrue, syncVarEqualLabel));
 
@@ -372,11 +375,6 @@ namespace Replica.Codegen
 
                     serWorker.Append(syncVarEqualLabel);
                 }
-            }
-            catch (Exception)
-            {
-
-
             }
         }
 
