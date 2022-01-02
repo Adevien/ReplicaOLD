@@ -104,8 +104,6 @@ namespace Replica.Codegen
 
                                     property.SetMethod.Body.Instructions.Clear();
                                     property.SetMethod.Body.Instructions.AddRangeAt(NewIL, 0);
-
-                                    //property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
                                 }
                             }
                             const MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual;
@@ -327,6 +325,14 @@ namespace Replica.Codegen
 
                             TypeDef.Methods.Add(ReadMethod);
 
+                        }
+
+                        foreach (PropertyDefinition property in TypeDef.Properties.Where(x => x.HasCustomAttributes).ToList())
+                        {
+                            if (property.CustomAttributes.Any(x => x.AttributeType.FullName.Contains("NetVar")))
+                            {
+                                property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
+                            }
                         }
                     }
 
