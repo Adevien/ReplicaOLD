@@ -8,13 +8,13 @@ namespace Replica.Runtime
         /// <summary>
         /// Event for property changed callback
         /// </summary>
-        public string callback;
+        public string _callback;
 
         /// <summary>
         /// Constructor for property changed callback
         /// </summary>
         /// <param name="Callback"></param>
-        public NetVar(string _callback) => callback = _callback;
+        public NetVar(string callback) => _callback = callback;
 
         /// <summary>
         /// Default constructor without property changed callback
