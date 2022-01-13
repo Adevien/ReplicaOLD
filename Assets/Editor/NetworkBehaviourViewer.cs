@@ -59,6 +59,7 @@ namespace Replica.Editor
             header.stretchWidth = true; 
             header.fontStyle = FontStyle.Bold;
             header.fontSize = 14;
+            header.normal.textColor = Color.white;
             ColorUtility.TryParseHtmlString("#242424", out Color cx);
             header.normal.background = MakeTex(100, 100, cx);
 
