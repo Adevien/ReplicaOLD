@@ -2,14 +2,19 @@ using Replica.Runtime;
 using System;
 using UnityEngine;
 
-public class CD : NetworkBehaviour
+namespace Replica.Demo
 {
-    public string Name;
-
-    [NetVar(nameof(OnHealthChanged))] public float Health { get; set; }
-
-    public void OnHealthChanged(float value)
+    public class CD : NetworkBehaviour
     {
-        Debug.Log($"[{Name}] Health Changed");
+        public string Name;
+
+        [NetVar(nameof(OnHealthChanged))] public float Health { get; set; }
+
+        [NetVar] public float Speed { get; set; }
+
+        public void OnHealthChanged(float value)
+        {
+            Debug.Log($"[{Name}] Health Changed");
+        }
     }
 }

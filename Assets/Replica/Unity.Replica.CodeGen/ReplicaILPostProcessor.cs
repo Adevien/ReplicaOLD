@@ -347,13 +347,13 @@ namespace Unity.Replica.Editor.CodeGen
 
                     TypeDef.Methods.Add(ReadMethod);
 
-                    foreach (PropertyDefinition property in TypeDef.Properties.Where(x => x.HasCustomAttributes).ToList())
-                    {
-                        if (property.CustomAttributes.Any(x => x.AttributeType.FullName.Contains("NetVar")))
-                        {
-                            property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
-                        }
-                    }
+                    //foreach (PropertyDefinition property in TypeDef.Properties.Where(x => x.HasCustomAttributes).ToList())
+                    //{
+                    //    if (property.CustomAttributes.Any(x => x.AttributeType.FullName.Contains("NetVar")))
+                    //    {
+                    //        property.CustomAttributes.Remove(property.CustomAttributes.First(x => x.AttributeType.FullName.Contains("NetVar")));
+                    //    }
+                    //}
                 }
 
                 //if (module.GetTypes().Where(t => t.Resolve().IsSubclassOf<NetworkBehaviour>()).Count() == 0)

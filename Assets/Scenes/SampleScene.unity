@@ -330,7 +330,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f88129e9a1ae934ab02ae2bae44b275, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Name: A
+  Name: LOCAL
 --- !u!4 &1661287961
 Transform:
   m_ObjectHideFlags: 0
@@ -357,8 +357,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8c98d6637e88f5449b684aff380d9bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  clientA: {fileID: 1661287960}
-  clientB: {fileID: 1661287963}
+  LocalObject: {fileID: 1661287960}
+  RemoteObject: {fileID: 1661287963}
   Initial: 1
 --- !u!114 &1661287963
 MonoBehaviour:
@@ -372,4 +372,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f88129e9a1ae934ab02ae2bae44b275, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Name: B
+  Name: REMOTE

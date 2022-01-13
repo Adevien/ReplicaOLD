@@ -1,28 +1,35 @@
 ﻿using Replica.Runtime;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Assets
+namespace Replica.Demo
 {
     public class Demo : MonoBehaviour
     {
-        public CD clientA;
-        public CD clientB;
+        public CD LocalObject;
+        public CD RemoteObject;
 
         public bool Initial = true;
 
         private void Awake()
         {
-            clientA.IsLocal = false;
-            clientB.IsLocal = true;
+            LocalObject.IsLocal = false;
+            RemoteObject.IsLocal = true;
         }
 
         private void Update()
         {
+            if(Input.GetKeyDown(KeyCode.Z))
+            {
+                NetBuffer buffer = new NetBuffer();
+
+                buffer.WriteBool(true);
+
+                bool initial = buffer.ReadBool();
+
+                LocalObject.WriteNetVars(buffer, initial);
+                RemoteObject.ReadNetVars(buffer, initial);
+            }
+
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 if (Initial)
@@ -31,15 +38,15 @@ namespace Assets
 
                     buffer.WriteBool(true);
 
-                    clientA.Health = 12.5f;
+                    LocalObject.Health = 12.5f;
 
                     bool initial = buffer.ReadBool();
 
-                    clientA.WriteNetVars(buffer, initial);
-                    clientB.ReadNetVars(buffer, initial);
+                    LocalObject.WriteNetVars(buffer, initial);
+                    RemoteObject.ReadNetVars(buffer, initial);
 
-                    Debug.Log($"CLIENT_A FLAG COUNT {clientA.Flags} initial:({initial})");
-                    Debug.Log($"CLIENT_B FLAG COUNT {clientB.Flags} initial:({initial})");
+                    Debug.Log($"CLIENT_A FLAG COUNT {LocalObject.Flags} initial:({initial})");
+                    Debug.Log($"CLIENT_B FLAG COUNT {RemoteObject.Flags} initial:({initial})");
 
                     Initial = false;
 
@@ -50,15 +57,15 @@ namespace Assets
 
                     buffer.WriteBool(false);
 
-                    clientA.Health++;
+                    LocalObject.Health++;
 
                     bool initial = buffer.ReadBool();
 
-                    clientA.WriteNetVars(buffer, initial);
-                    clientB.ReadNetVars(buffer, initial);
+                    LocalObject.WriteNetVars(buffer, initial);
+                    RemoteObject.ReadNetVars(buffer, initial);
 
-                    Debug.Log($"CLIENT_A FLAG COUNT {clientA.Flags} initial:({initial})");
-                    Debug.Log($"CLIENT_B FLAG COUNT {clientB.Flags} initial:({initial})");
+                    Debug.Log($"CLIENT_A FLAG COUNT {LocalObject.Flags} initial:({initial})");
+                    Debug.Log($"CLIENT_B FLAG COUNT {RemoteObject.Flags} initial:({initial})");
                 }
             }
         }
