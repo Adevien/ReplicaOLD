@@ -1,10 +1,8 @@
 ﻿using System;
-using UnityEngine;
 
-namespace Replica.Runtime
-{
-    public class NetVar : Attribute
-    {
+namespace Replica.Runtime {
+    [Serializable]
+    public class NetVar : Attribute {
         /// <summary>
         /// Event for property changed callback
         /// </summary>
@@ -19,8 +17,7 @@ namespace Replica.Runtime
         /// <summary>
         /// Default constructor without property changed callback
         /// </summary>
-        public NetVar()
-        {
+        public NetVar() {
 
         }
     }

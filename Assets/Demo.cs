@@ -1,72 +1,41 @@
 ﻿using Replica.Runtime;
 using UnityEngine;
 
-namespace Replica.Demo
-{
-    public class Demo : MonoBehaviour
-    {
-        public CD LocalObject;
-        public CD RemoteObject;
+namespace Replica.Demo {
+    public class Demo : MonoBehaviour {
+        public NetworkEntityDemo LocalObject;
+        public NetworkEntityDemo RemoteObject;
 
         public bool Initial = true;
 
-        private void Awake()
-        {
+        private void Awake() {
             LocalObject.IsLocal = false;
             RemoteObject.IsLocal = true;
         }
 
-        private void Update()
-        {
-            if(Input.GetKeyDown(KeyCode.Z))
-            {
-                NetBuffer buffer = new NetBuffer();
+        Byter writer = new Byter();
+        Byter reader = new Byter();
 
-                buffer.WriteBool(true);
+        private void Update() {
+            if (Input.GetKeyDown(KeyCode.Space)) {
 
-                bool initial = buffer.ReadBool();
+                LocalObject.Singles += 12.5f;
 
-                LocalObject.WriteNetVars(buffer, initial);
-                RemoteObject.ReadNetVars(buffer, initial);
-            }
+                LocalObject.WriteNetVars(writer, Initial);
 
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                if (Initial)
-                {
-                    NetBuffer buffer = new NetBuffer();
-
-                    buffer.WriteBool(true);
-
-                    LocalObject.Health = 12.5f;
-
-                    bool initial = buffer.ReadBool();
-
-                    LocalObject.WriteNetVars(buffer, initial);
-                    RemoteObject.ReadNetVars(buffer, initial);
-
-                    Debug.Log($"CLIENT_A FLAG COUNT {LocalObject.Flags} initial:({initial})");
-                    Debug.Log($"CLIENT_B FLAG COUNT {RemoteObject.Flags} initial:({initial})");
-
-                    Initial = false;
-
+                unsafe {
+                    NativeUtils.MemCpyFast(reader.Data, writer.Data, writer.Position);
                 }
-                else
-                {
-                    NetBuffer buffer = new NetBuffer();
 
-                    buffer.WriteBool(false);
+                RemoteObject.ReadNetVars(reader, Initial);
 
-                    LocalObject.Health++;
+                Debug.Log($"CLIENT_Ax FLAG COUNT {LocalObject.Flags} initial:({Initial})");
+                Debug.Log($"CLIENT_Bx FLAG COUNT {RemoteObject.Flags} initial:({Initial})");
 
-                    bool initial = buffer.ReadBool();
+                Initial = false;
 
-                    LocalObject.WriteNetVars(buffer, initial);
-                    RemoteObject.ReadNetVars(buffer, initial);
-
-                    Debug.Log($"CLIENT_A FLAG COUNT {LocalObject.Flags} initial:({initial})");
-                    Debug.Log($"CLIENT_B FLAG COUNT {RemoteObject.Flags} initial:({initial})");
-                }
+                writer.Reset();
+                reader.Reset();
             }
         }
     }

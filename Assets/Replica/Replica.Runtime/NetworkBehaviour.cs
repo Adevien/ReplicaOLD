@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Replica.Runtime
-{
-    public abstract class NetworkBehaviour : MonoBehaviour
-    {
+namespace Replica.Runtime {
+    public abstract class NetworkBehaviour : MonoBehaviour {
         /// <summary>
         /// Check if its a local behaviour and not remote
         /// </summary>
@@ -27,8 +25,7 @@ namespace Replica.Runtime
         /// <param name="value"></param>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static bool Equals<T>(T value, ref T field)
-        {
+        public static bool Equals<T>(T value, ref T field) {
             return EqualityComparer<T>.Default.Equals(value, field);
         }
 
@@ -39,37 +36,33 @@ namespace Replica.Runtime
         /// <param name="value"></param>
         /// <param name="field"></param>
         /// <param name="flag"></param>
-        public void Set<T>(T value, ref T field, int flag)
-        {
+        public void Set<T>(T value, ref T field, int flag) {
             Flags |= flag;
             field = value;
-		}
+        }
 
         /// <summary>
         /// Checks if the property is guarded to avoid on changed callback
         /// </summary>
         /// <param name="flag"></param>
         /// <returns></returns>
-        protected bool GetGuard(int flag)
-		{
-			return (Guards & flag) > 0;
-		}
+        protected bool GetGuard(int flag) {
+            return (Guards & flag) > 0;
+        }
 
         /// <summary>
         /// Sets the bitmask guard state
         /// </summary>
         /// <param name="flag"></param>
         /// <param name="value"></param>
-		protected void Guard(int flag, bool value)
-		{
-			if (value)
-			{
-				Guards |= flag;
-				return;
-			}
+		protected void Guard(int flag, bool value) {
+            if (value) {
+                Guards |= flag;
+                return;
+            }
 
-			Guards &= ~flag;
-		}
+            Guards &= ~flag;
+        }
 
         /// <summary>
         /// Writes all the changed fields and the flag to writer
@@ -78,8 +71,7 @@ namespace Replica.Runtime
         /// <param name="writer"></param>
         /// <param name="initial"></param>
         /// <returns></returns>
-        public virtual bool WriteNetVars(NetBuffer writer, bool initial)
-        {
+        public virtual bool WriteNetVars(Byter writer, bool initial) {
             return false;
         }
 
@@ -89,8 +81,7 @@ namespace Replica.Runtime
         /// </summary>
         /// <param name="reader"></param>
         /// <param name="initial"></param>
-        public virtual void ReadNetVars(NetBuffer reader, bool initial)
-        {
+        public virtual void ReadNetVars(Byter reader, bool initial) {
 
         }
     }

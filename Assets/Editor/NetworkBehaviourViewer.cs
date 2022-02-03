@@ -6,38 +6,51 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Replica.Editor
-{
+namespace Replica.Editor {
     [CustomEditor(typeof(NetworkBehaviour), true)]
-    public class NetworkBehaviourViewer : UnityEditor.Editor
-    { 
+    public class NetworkBehaviourViewer : UnityEditor.Editor {
         protected object InspectedNetVar { get; set; }
         protected List<PropertyInfo> NetVars { get; set; }
 
-        object MakeFieldForType(Type type, string label, object value)
-        {
+        object MakeFieldForType(Type type, string label, object val) {
             EditorStyles.label.normal.textColor = Color.white;
             EditorStyles.label.hover.textColor = Color.yellow;
             EditorStyles.label.fontStyle = FontStyle.Bold;
 
-            if (type == typeof(bool))
-                return EditorGUILayout.Toggle(label, (bool)value);
-            if (type == typeof(int))
-                return EditorGUILayout.IntField(label, (int)value);
-            if (type == typeof(long))
-                return EditorGUILayout.LongField(label, (long)value);
-            if (type == typeof(float))
-                return EditorGUILayout.FloatField(label, (float)value);
-            if (type == typeof(double))
-                return EditorGUILayout.DoubleField(label, (double)value);
-            if (type == typeof(string))
-                return EditorGUILayout.TextField(label, (string)value);
+            var options = GUILayout.MinWidth(300);
 
-            throw new ArgumentException($"Invalid type: {nameof(type)}");
+            if (type == typeof(int)) {
+                val = EditorGUILayout.IntField(label, (int)val, options);
+            } else if (type == typeof(uint)) {
+                val = (uint)EditorGUILayout.LongField(label, (long)((uint)val), options);
+            } else if (type == typeof(short)) {
+                val = (short)EditorGUILayout.IntField(label, (int)((short)val), options);
+            } else if (type == typeof(ushort)) {
+                val = (ushort)EditorGUILayout.IntField(label, (int)((ushort)val), options);
+            } else if (type == typeof(sbyte)) {
+                val = (sbyte)EditorGUILayout.IntField(label, (int)((sbyte)val), options);
+            } else if (type == typeof(byte)) {
+                val = (byte)EditorGUILayout.IntField(label, (int)((byte)val), options);
+            } else if (type == typeof(long)) {
+                val = EditorGUILayout.LongField(label, (long)val, options);
+            } else if (type == typeof(ulong)) {
+                val = (ulong)EditorGUILayout.LongField(label, (long)((ulong)val), options);
+            } else if (type == typeof(bool)) {
+                val = EditorGUILayout.Toggle(label, (bool)val, options);
+            } else if (type == typeof(string)) {
+                val = EditorGUILayout.TextField(label, (string)val, options);
+            } else if (type == typeof(float)) {
+                val = EditorGUILayout.FloatField(label, (float)val, options);
+            } else if (type == typeof(double)) {
+                val = EditorGUILayout.DoubleField(label, (double)val, options);
+            } else {
+                EditorGUILayout.LabelField($"Type not renderable {type.Name}");
+            }
+
+            return val;
         }
 
-        public override void OnInspectorGUI()
-        {
+        public override void OnInspectorGUI() {
             base.OnInspectorGUI();
 
             InspectedNetVar = serializedObject.targetObject;
@@ -48,23 +61,25 @@ namespace Replica.Editor
                 .Where(property => (property.SetMethod?.IsPublic).GetValueOrDefault())
                 .ToList();
 
-
             EditorGUILayout.Separator();
 
-            GUIStyle header = new GUIStyle("box");
-            header.margin = new RectOffset(-5,-5,-5,-5);
-            header.padding = new RectOffset(6,6,6,6);
-            header.richText = true;
-            header.alignment = TextAnchor.MiddleCenter;
-            header.stretchWidth = true; 
-            header.fontStyle = FontStyle.Bold;
-            header.fontSize = 14;
+            GUIStyle header = new GUIStyle("box") {
+                margin = new RectOffset(-5, -5, -5, -5),
+                padding = new RectOffset(6, 6, 6, 6),
+                richText = true,
+                alignment = TextAnchor.MiddleCenter,
+                stretchWidth = true,
+                fontStyle = FontStyle.Bold,
+                fontSize = 14
+            };
+
             header.normal.textColor = Color.white;
             ColorUtility.TryParseHtmlString("#242424", out Color cx);
             header.normal.background = MakeTex(100, 100, cx);
 
-            GUIStyle container = new GUIStyle(EditorStyles.helpBox);
-            container.padding = new RectOffset(0, 0, 0, 10);
+            GUIStyle container = new GUIStyle(EditorStyles.helpBox) {
+                padding = new RectOffset(0, 0, 0, 10)
+            };
 
             GUILayout.BeginHorizontal(container);
             GUILayout.BeginVertical();
@@ -72,18 +87,17 @@ namespace Replica.Editor
             GUILayout.Label("NETWORKED PROPERTIES", header);
             EditorGUILayout.Separator();
 
-            foreach (PropertyInfo property in NetVars)
-            {
+            foreach (PropertyInfo property in NetVars) {
+                GUILayout.BeginHorizontal();
                 string label = $"{property.Name.Replace("Network", "")}";
                 property.SetValue(InspectedNetVar, MakeFieldForType(property.PropertyType, label, property.GetValue(InspectedNetVar)));
-
                 ColorUtility.TryParseHtmlString("#bcbcbc", out Color c);
                 ColorUtility.TryParseHtmlString("#7ba9ee", out Color cc);
-
                 EditorStyles.label.normal.textColor = c;
                 EditorStyles.label.hover.textColor = cc;
                 EditorStyles.label.fontStyle = FontStyle.Normal;
-
+                GUILayout.Label(property.PropertyType.Name, GUILayout.MinWidth(100));
+                GUILayout.EndHorizontal();
                 Repaint();
             }
 
@@ -91,17 +105,17 @@ namespace Replica.Editor
             GUILayout.EndHorizontal();
         }
 
-        private Texture2D MakeTex(int width, int height, Color col)
-        {
-            Color[] pix = new Color[width * height];
-            for (int i = 0; i < pix.Length; ++i)     
+        private Texture2D MakeTex(int width, int height, Color col) {
+            Color32[] pix = new Color32[width * height];
+            for (int i = 0; i < pix.Length; ++i)
                 pix[i] = col;
-            
+
             Texture2D result = new Texture2D(width, height);
-            result.SetPixels(pix);
+            result.SetPixels32(pix);
             result.Apply();
             return result;
         }
 
     }
 }
+

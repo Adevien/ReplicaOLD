@@ -6,17 +6,14 @@ using System.Threading;
 using Mono.Cecil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 
-namespace Unity.Replica.Editor.CodeGen
-{
-    internal class PPAssemblyResolver : IAssemblyResolver
-    {
+namespace Unity.Replica.Editor.CodeGen {
+    internal class PPAssemblyResolver : IAssemblyResolver {
         private readonly string[] m_AssemblyReferences;
         private readonly Dictionary<string, AssemblyDefinition> m_AssemblyCache = new Dictionary<string, AssemblyDefinition>();
         private readonly ICompiledAssembly m_CompiledAssembly;
         private AssemblyDefinition m_SelfAssembly;
 
-        public PPAssemblyResolver(ICompiledAssembly compiledAssembly)
-        {
+        public PPAssemblyResolver(ICompiledAssembly compiledAssembly) {
             m_CompiledAssembly = compiledAssembly;
             m_AssemblyReferences = compiledAssembly.References;
         }
@@ -25,25 +22,20 @@ namespace Unity.Replica.Editor.CodeGen
 
         public AssemblyDefinition Resolve(AssemblyNameReference name) => Resolve(name, new ReaderParameters(ReadingMode.Deferred));
 
-        public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
-        {
-            lock (m_AssemblyCache)
-            {
-                if (name.Name == m_CompiledAssembly.Name)
-                {
+        public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters) {
+            lock (m_AssemblyCache) {
+                if (name.Name == m_CompiledAssembly.Name) {
                     return m_SelfAssembly;
                 }
 
                 var fileName = FindFile(name);
-                if (fileName == null)
-                {
+                if (fileName == null) {
                     return null;
                 }
 
                 var lastWriteTime = File.GetLastWriteTime(fileName);
                 var cacheKey = $"{fileName}{lastWriteTime}";
-                if (m_AssemblyCache.TryGetValue(cacheKey, out var result))
-                {
+                if (m_AssemblyCache.TryGetValue(cacheKey, out var result)) {
                     return result;
                 }
 
@@ -51,8 +43,7 @@ namespace Unity.Replica.Editor.CodeGen
 
                 var ms = MemoryStreamFor(fileName);
                 var pdb = $"{fileName}.pdb";
-                if (File.Exists(pdb))
-                {
+                if (File.Exists(pdb)) {
                     parameters.SymbolStream = MemoryStreamFor(pdb);
                 }
 
@@ -63,18 +54,15 @@ namespace Unity.Replica.Editor.CodeGen
             }
         }
 
-        private string FindFile(AssemblyNameReference name)
-        {
+        private string FindFile(AssemblyNameReference name) {
             var fileName = m_AssemblyReferences.FirstOrDefault(r => Path.GetFileName(r) == $"{name.Name}.dll");
-            if (fileName != null)
-            {
+            if (fileName != null) {
                 return fileName;
             }
 
             // perhaps the type comes from an exe instead
             fileName = m_AssemblyReferences.FirstOrDefault(r => Path.GetFileName(r) == $"{name.Name}.exe");
-            if (fileName != null)
-            {
+            if (fileName != null) {
                 return fileName;
             }
 
@@ -92,16 +80,13 @@ namespace Unity.Replica.Editor.CodeGen
                 .FirstOrDefault(File.Exists);
         }
 
-        private static MemoryStream MemoryStreamFor(string fileName)
-        {
-            return Retry(10, TimeSpan.FromSeconds(1), () =>
-            {
+        private static MemoryStream MemoryStreamFor(string fileName) {
+            return Retry(10, TimeSpan.FromSeconds(1), () => {
                 byte[] byteArray;
                 using var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 byteArray = new byte[fileStream.Length];
                 var readLength = fileStream.Read(byteArray, 0, (int)fileStream.Length);
-                if (readLength != fileStream.Length)
-                {
+                if (readLength != fileStream.Length) {
                     throw new InvalidOperationException("File read length is not full length of file.");
                 }
 
@@ -109,16 +94,11 @@ namespace Unity.Replica.Editor.CodeGen
             });
         }
 
-        private static MemoryStream Retry(int retryCount, TimeSpan waitTime, Func<MemoryStream> func)
-        {
-            try
-            {
+        private static MemoryStream Retry(int retryCount, TimeSpan waitTime, Func<MemoryStream> func) {
+            try {
                 return func();
-            }
-            catch (IOException)
-            {
-                if (retryCount == 0)
-                {
+            } catch (IOException) {
+                if (retryCount == 0) {
                     throw;
                 }
 
@@ -129,8 +109,7 @@ namespace Unity.Replica.Editor.CodeGen
             }
         }
 
-        public void AddAssemblyDefinitionBeingOperatedOn(AssemblyDefinition assemblyDefinition)
-        {
+        public void AddAssemblyDefinitionBeingOperatedOn(AssemblyDefinition assemblyDefinition) {
             m_SelfAssembly = assemblyDefinition;
         }
     }
