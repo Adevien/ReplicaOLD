@@ -7,7 +7,7 @@ namespace Replica.Demo {
 
         public Transform View;
 
-        //NetworkRigidbodyController _cc;
+        NetworkRigidbodyController _cc;
 
         [NetVar] public float Yaw { get; set; }
         [NetVar] public float Pitch { get; set; }
@@ -23,19 +23,19 @@ namespace Replica.Demo {
                 if (input.IsDown(Key.BTN_LEFTWARD)) direction -= transform.right;
                 if (input.IsDown(Key.BTN_RIGHTWARD)) direction += transform.right;
 
-                // if (input.IsDown(Key.BTN_UPWARD))
-                // _cc.Jump();
+                if (input.IsDown(Key.BTN_UPWARD))
+                    _cc.Jump();
             }
 
-            // _cc.Move(direction.normalized * 3f);
+             _cc.Move(direction.normalized * 3f);
 
             transform.rotation = Quaternion.Euler(0, Yaw, 0);
         }
 
         //TODO : Abstract render with custom view replication
         public override void Render() {
-            //View.position = Vector3.Lerp(View.position, _cc.Position, Runner.Delta);
-            //View.position = Interpolator.Lerp(View.position, _cc.Position);
+            View.position = Vector3.Lerp(View.position, _cc.Position, Runner.Delta);
+            View.position = Interpolator.Lerp(View.position, _cc.Position);
         }
     }
 }
